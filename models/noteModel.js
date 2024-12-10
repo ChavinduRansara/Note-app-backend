@@ -4,6 +4,7 @@ class Note {
   static async create(userId, { title, content, category_id, tags }) {
     const connection = await pool.getConnection();
     await connection.beginTransaction();
+    console.log(userId, title, content, category_id, tags);
 
     try {
       const [noteResult] = await connection.execute(
@@ -54,8 +55,17 @@ class Note {
     // `;
 
     let query = `
-      SELECT * 
-      FROM Notes 
+      SELECT 
+        Notes.*, 
+      GROUP_CONCAT(Tags.name) AS tags
+      FROM 
+        Notes
+      LEFT JOIN 
+        NoteTags ON Notes.id = NoteTags.note_id
+      LEFT JOIN 
+        Tags ON NoteTags.tag_id = Tags.id
+      GROUP BY 
+        Notes.id;
     `;
     const queryParams = [userId];
 
