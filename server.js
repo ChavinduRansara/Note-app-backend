@@ -6,8 +6,8 @@ require('dotenv').config();
 // Import routes
 const userRoutes = require('./routes/userRoutes');
 const noteRoutes = require('./routes/noteRoutes');
-// const categoryRoutes = require('./routes/categoryRoutes');
-// const tagRoutes = require('./routes/tagRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const tagRoutes = require('./routes/tagRoutes');
 
 const app = express();
 
@@ -19,8 +19,8 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/notes', noteRoutes);
-// app.use('/api/categories', categoryRoutes);
-// app.use('/api/tags', tagRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/tags', tagRoutes);
 
 // Error handling
 // app.use(errorHandler);

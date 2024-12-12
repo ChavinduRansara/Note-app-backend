@@ -14,20 +14,11 @@ class Note {
       const noteId = noteResult.insertId;
 
       if (tags && tags.length > 0) {
-        for (const tagName of tags) {
-          await connection.execute(
-            'INSERT IGNORE INTO Tags (name) VALUES (?)',
-            [tagName]
-          );
-          
-          const [tagResult] = await connection.execute(
-            'SELECT id FROM Tags WHERE name = ?',
-            [tagName]
-          );
+        for (const tagId of tags) {
           
           await connection.execute(
             'INSERT INTO NoteTags (note_id, tag_id) VALUES (?, ?)',
-            [noteId, tagResult[0].id]
+            [noteId, tagId]
           );
         }
       }
@@ -64,6 +55,8 @@ class Note {
         NoteTags ON Notes.id = NoteTags.note_id
       LEFT JOIN 
         Tags ON NoteTags.tag_id = Tags.id
+      WHERE
+        Notes.user_id = ?
       GROUP BY 
         Notes.id;
     `;
@@ -92,17 +85,24 @@ class Note {
 
   static async findById(noteId, userId) {
     const [notes] = await pool.execute(
-      `SELECT n.*, 
-      c.name as category_name,
-      GROUP_CONCAT(t.name) as tags
-      FROM Notes n
-      LEFT JOIN Categories c ON n.category_id = c.id
-      LEFT JOIN NoteTags nt ON n.id = nt.note_id
-      LEFT JOIN Tags t ON nt.tag_id = t.id
-      WHERE n.id = ? AND n.user_id = ?
-      GROUP BY n.id`,
-      [noteId, userId]
+    `
+      SELECT 
+        Notes.*, 
+      GROUP_CONCAT(Tags.id) AS tags
+      FROM 
+        Notes
+      LEFT JOIN 
+        NoteTags ON Notes.id = NoteTags.note_id
+      LEFT JOIN 
+        Tags ON NoteTags.tag_id = Tags.id
+      WHERE
+        Notes.user_id = ? AND Notes.id = ?
+      GROUP BY 
+        Notes.id;
+    `,
+      [userId,noteId]
     );
+    notes[0].tags = notes[0].tags ? notes[0].tags.split(',') : [];
     return notes[0];
   }
 
@@ -121,8 +121,8 @@ class Note {
       }
 
       await connection.execute(
-        'UPDATE Notes SET title = ?, content = ?, category_id = ?, is_pinned = ? WHERE id = ?',
-        [title, content, category_id, is_pinned, noteId]
+        'UPDATE Notes SET title = ?, content = ?, category_id = ? WHERE id = ?',
+        [title, content, category_id, noteId]
       );
 
       if (tags) {
@@ -131,20 +131,10 @@ class Note {
           [noteId]
         );
 
-        for (const tagName of tags) {
-          await connection.execute(
-            'INSERT IGNORE INTO Tags (name) VALUES (?)',
-            [tagName]
-          );
-
-          const [tagResult] = await connection.execute(
-            'SELECT id FROM Tags WHERE name = ?',
-            [tagName]
-          );
-
+        for (const tagId of tags) {
           await connection.execute(
             'INSERT INTO NoteTags (note_id, tag_id) VALUES (?, ?)',
-            [noteId, tagResult[0].id]
+            [noteId, tagId]
           );
         }
       }
